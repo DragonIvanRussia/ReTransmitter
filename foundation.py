@@ -6,17 +6,6 @@ import sys
 import pygame
 
 
-class Query:
-    def __init__(self):
-        self.list = []
-
-    def add(self, obj, func, args):
-        self.list.append([obj, func, args])
-
-    def __call__(self):
-        for elem in self.list:
-            elem.obj(self.func(args))
-
 
 def ColorDelta(color, delta, variation: str, *args):
     """linear: add value
