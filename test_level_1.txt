@@ -1,0 +1,6 @@
+4000;left
+8000;dash_right
+9000;thunder
+13000;right
+17000;dash_left
+20000;end

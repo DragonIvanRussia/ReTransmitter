@@ -36,7 +36,7 @@ sine: varies between original color and current color"""
                 buffer = 255
             if buffer < orig[i]:
                 buffer = orig[i]
-            result.append(buffer)
+            result.append(int(buffer))
     return tuple(result)
 
 def MoveDelta(origin, offset, variation: str, *args):
@@ -64,6 +64,11 @@ def MoveDelta(origin, offset, variation: str, *args):
                     result[i] = 2 * x * x * preset + origin[i]
                 else:
                     result[i] = (1 - math.pow((-2 * x + 2), 2) / 2) * preset + origin[i]
+        if variation == 'out_quad':
+            for i in range(0, 2):
+                preset = offset[i] - origin[i]
+                x = duration / ceil
+                result[i] = (1 - (1 - x) * (1 - x)) * preset + origin[i]
         elif variation == 'expo':
             for i in range(0, 2):
                 result = 1
@@ -71,6 +76,22 @@ def MoveDelta(origin, offset, variation: str, *args):
             handle_bottom = args[2][0]
             handle_top = args[2][1]
     return tuple(result)
+
+class BGColor():
+    def __init__(self, orig, delta, variation='linear', *args):
+        global bg_color
+        self.delta = delta
+        self.variation = variation
+        self.args = args
+        self.original = orig
+        if self.variation == 'sine' and len(self.args) == 1:
+            self.args = (0, self.args[0])
+
+    def __call__(self):
+        bg_color = ColorDelta(self.original, self.delta, self.variation, *self.args, self.original)
+        if self.variation == 'sine':
+            self.args = (self.args[0] + 1, self.args[1])
+        return bg_color
 
 def load_image(name, colorkey=None):
     fullname = os.path.join('images', name)

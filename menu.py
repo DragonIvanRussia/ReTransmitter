@@ -1,315 +1,167 @@
 import pygame
+import essentials
 from foundation import *
 
-
-class Object(pygame.sprite.Sprite):
-    def __init__(self, img, rect=[0, 0, 100, 100], orig=[0, 0], groups=[]):
-        super().__init__(groups)
-        self.image = pygame.transform.scale(img, (rect[2], rect[3]))
-        self.rect = self.image.get_rect()
-        self.rect.x = rect[0]
-        self.rect.y = rect[1]
-        
-        self.orig = orig
-        self.point = rect[:2]
-        
-        self.frame = 0
-        self.limit = 100
-        self.state = True
-
-    def move(self, delta=(0, 0)):
-        x, y = delta
-
-    def update(self, event):
-        if self.frame != self.limit and self.state:
-            self.frame += 1
-            a = MoveDelta(self.orig, self.point, 'quad', self.frame, self.limit)
-            self.rect = (*a, *self.rect[2:])
-        elif self.frame != self.limit and not self.state:
-            self.frame += 1
-            a = MoveDelta(self.point, self.orig, 'quad', self.frame, self.limit)
-            self.rect = (*a, *self.rect[2:])
-        
-    def replace(self):
-        self.switch()
-        self.frame = self.limit - 1
-        
-    
-    def switch(self):
-        self.state = not self.state
-        self.frame = 0
-
-
-class Button(Object):
-    def __init__(self, img, command, text="generic", rect=[0, 0, 100, 100], orig=[0,0], groups=[]):
-        global buttons
-        self.action = command
-        self.shown = True
-        self.clicked = False
-        super().__init__(img, groups=groups, rect=rect, orig=orig)
-
-    def update(self, *args, cont=True):
-        if args and args[0].type == pygame.MOUSEBUTTONDOWN and args[0].button == pygame.BUTTON_LEFT:
-            if self.shown and pygame.Rect(self.rect).collidepoint(args[0].pos) and not self.clicked:
-                self.clicked = True
-                self.action()
-        if args and args[0].type == pygame.MOUSEBUTTONUP and args[0].button == pygame.BUTTON_LEFT:
-            self.clicked = False
-        if cont:
-            super().update(None)
-
-class Settings_Select(Button):
-    def __init__(self, img, text, font, rect, action, groups):
-        global buttons
-        try:
-            buf = pygame.font.SysFont(*font)
-        except:
-            buf = pygame.font.Font(*font)
-        text = buf.render(text, True, (255, 255, 255))
-        
-        buf = pygame.Surface((rect[2] + text.get_width(), rect[3]), pygame.SRCALPHA)
-        buf.blit(img, (0, 0))
-        buf.blit(text, (rect[2], (rect[3] - text.get_rect()[3]) / 2))
-        
-        size = buf.get_rect()[2:]
-        self.rect = pygame.Rect(rect[0], rect[1], *size)
-        self.orig = self.rect
-
-        self.sel = 0
-        self.Lsel = 0
-        self.last_pos = (0, 0)
-        
-        super().__init__(buf, action, rect=self.rect, groups=groups, orig=self.orig)
-
-    def update(self, *args):
-        if self.frame != self.limit and self.state:
-            self.frame += 1
-            a = MoveDelta(self.orig[:2], (-400, self.orig[1]), 'quad', self.frame, self.limit)
-            self.rect = pygame.Rect(a[0], a[1], *self.rect[2:])
-        elif self.frame != self.limit and not self.state:
-            self.frame += 1
-            a = MoveDelta((-400, self.orig[1]), self.orig[:2], 'quad', self.frame, self.limit)
-            self.rect = pygame.Rect(a[0], a[1], *self.rect[2:])
-        
-        if args and args[0].type == pygame.MOUSEMOTION:
-            self.last_pos = args[0].pos
-
-        if self.frame == self.limit:
-            self.Lsel = self.sel
-            if self.shown and pygame.Rect(self.rect).collidepoint(self.last_pos):
-                self.sel += 1
-            else:
-                self.sel -= 1
-            if self.sel < 0:
-                self.sel = 0
-            elif self.sel > 20:
-                self.sel = 20
-            self.rect.x = self.rect.x + self.sel - self.Lsel
-        super().update(*args, cont=False)
-
-    def switch(self):
-        self.state = not self.state
-        self.frame = 0
-
-
-class Level(Object):
-    def __init__(self, img, state, command, rect=[0, 0, 100, 100]):
-        global level
-        if state == 0:
-            self.x_frame = 0
-            self.y_frame = 150
-        elif state == 1:
-            self.x_frame = 50
-            self.y_frame = 0
-        elif state == 2:
-            self.x_frame = 100
-            self.y_frame = 50
-        elif state == 3:
-            self.x_frame = 150
-            self.y_frame = 100
+def SwitchModes():
+    global cooldown, last, status, start_btn
+    if cooldown <= 0:
+        misc = False
+        for sprite_object in essentials.main.sprites():
+            sprite_object.switch()
+        for sprite_object in essentials.settings.sprites():
+            sprite_object.switch()
+        for sprite_object in essentials.levels.sprites():
+            sprite_object.switch()
+        if play_btn.state:
+            play_btn.replace()
             
-        self.x_offset = 0
-        self.y_offset = 0
-        self.action = command
-        self.clicked = True
-        self.shown = True
-        self.selected = False
-        self._layer = 0
-        self.sel = 0
-        self.last_pos = (-100, -100)
+        cooldown = 100
+        last = status
+        status = "Transition"
+        active = None
         
-        super().__init__(img, rect, groups=levels)
-
-    def click(self, *args):
-        if args and args[0].type == pygame.MOUSEBUTTONDOWN and args[0].button == pygame.BUTTON_LEFT:
-            if self.shown and self.rect.collidepoint(args[0].pos) and not self.clicked:
-                self.clicked = True
-                self.selected = not self.selected
-            elif not self.rect.collidepoint(args[0].pos) and pygame.Rect((150, 60, 850, 390)).collidepoint(args[0].pos):
-                self.selected = False
-            self.action()
-        if args and args[0].type == pygame.MOUSEBUTTONUP and args[0].button == pygame.BUTTON_LEFT:
-            self.clicked = False
-        if args and args[0].type == pygame.MOUSEMOTION:
-            self.last_pos = args[0].pos
-
-    def update(self, args):
-        global levels
-        
-        self.x_frame += 0.3
-        self.y_frame += 0.3
-        self.rect.x = MoveDelta((300, 200), (750, 300), 'sine', self.y_frame, 100)[0] + self.x_offset
-        self.rect.y = MoveDelta((300, 200), (750, 300), 'sine', self.x_frame, 100)[1] + self.y_offset + self.sel
-        
-        if self.frame != self.limit and self.state:
-            self.frame += 1
-            a = MoveDelta((0, 500), (0, 0), 'quad', self.frame, self.limit)
-            self.y_offset = a[1]
-        elif self.frame != self.limit and not self.state:
-            self.frame += 1
-            a = MoveDelta((0, 0), (0, 500), 'quad', self.frame, self.limit)
-            self.y_offset = a[1]
-        
-        if self.frame == self.limit:
-            self.shown = True
-            if self.rect.y > 250:
-                levels.change_layer(self, 1)
-            else:
-                levels.change_layer(self, 0)
-        if args != ():
-            self.click(args)
-
-        if self.shown and self.rect.collidepoint(self.last_pos) or self.selected:
-            self.sel -= 1
+        if last == "Settings":
+            fake_bar.replace()
         else:
-            self.sel += 1
-        if self.sel < -20:
-            self.sel = -20
-        elif self.sel > 0:
-            self.sel = 0
+            fake_bar.switch()
+
+def hide():
+    global misc, cooldown
+    if cooldown <= 0:
+        misc = True
+        cooldown = 100
         
-    
-    def switch(self):
-        self.state = not self.state
-        self.frame = 0
-        
-class SideBar(Object):
-    def __init__(self, img):
-        global main
-        self.rect = (0, 0, 150, 600)
-        super().__init__(img, groups=main, rect=self.rect, orig=(-150, 0))
-
-
-class SettingsBar(Object):
-    def __init__(self, img):
-        global main
-        self.rect = (-350, 0, 350, 600)
-        self.state = False
-        super().__init__(img, groups=settings, rect=self.rect)
-
-    
-
-class TopBar(Object):
-    def __init__(self, img, font):
-        global main
-        self.rect = (0, 0, 1000, 60)
-        super().__init__(img, groups=main, rect=self.rect, orig=(0, -60))
-        
-        try:
-            buf = pygame.font.SysFont(*font)
-        except:
-            buf = pygame.font.Font(*font)
-        text = buf.render("Main Menu", True, (255, 255, 255))
-        self.image.blit(text, (150, 12))
-
-
-class Image(Object):
-    def __init__(self, img, pos, orig, groups=[]):
-        global main
-        self.pos = pos
-        self.orig = orig
-        self.rect = img.get_rect()
-        self.rect.move_ip(pos)
-        self.orig_img = img
-        
-        super().__init__(img, self.rect, groups=groups, orig=orig)
-
-        
-
-class InfoBar(Object):
-    def __init__(self, img):
-        global main
-        self.rect = [0, 520, 1000, 150]
-        self.prop = 520
-        self.retracted = True
-        self.state = False
-        self.selected = False
-        super().__init__(img, groups=main, rect=self.rect)
-
-    def select(self):
-        level = scan_selected()
-        if not self.retracted:
-            if level == None:
-                if self.prop != 520:
-                    self.btn.state = False
-                    self.btn.frame = 0
-                self.prop = 520
+        for sprite_object in essentials.settings.sprites():
+            if sprite_object == bar:
+                bar.replace()
+            elif sprite_object == closing:
+                closing.action = show
             else:
-                if self.prop != 450:
-                    self.btn.state = True
-                    self.btn.frame = 60
-                self.prop = 450
-                self.btn.state = True
-            self.selected = not self.selected
-            self.rect = (0, self.prop, 1000, 150)
-    def update(self, args):
-        if self.frame != self.limit and self.state:
-            self.frame += 1
-            a = MoveDelta((0, 600), (0, self.prop), 'quad', self.frame, self.limit)
-            self.rect = (a[0], a[1], 1000, 150)
-        elif self.frame != self.limit and not self.state:
-            self.frame += 1
-            a = MoveDelta((0, self.prop), (0, 600), 'quad', self.frame, self.limit)
-            self.rect = (a[0], a[1], 1000, 150)
+                sprite_object.switch()
+        fake_bar.switch()
+
+def show():
+    global misc, cooldown2, cooldown, active, pulse
+    if cooldown2 <= 0:
+        misc = True
+        cooldown2 = 100
+        cooldown = 100
         
-        if not self.state:
-            self.retracted = True
-        if self.frame == self.limit:
-            if not self.state:
-                self.prop = 520
+        for sprite_object in essentials.settings.sprites():
+            if sprite_object == closing:
+                closing.action = SwitchModes
             else:
-                self.retracted = False
+                sprite_object.switch()
+        fake_bar.switch()
+    
+        for sprite_object in active.sprites():
+            sprite_object.switch()
+    pulse = True
 
-    def connect(self, btn):
-        self.btn = btn
+def call(arg):
+    global active, cooldown2
+    active = arg
+    cooldown2 = 100
+    hide()
+    for sprite_object in active.sprites():
+        sprite_object.switch()
 
-    def switch(self):
-        self.state = not self.state
-        self.frame = 0
-        
+def play():
+    global running, exec_status, level
+    running = False
+    exec_status = "play"
+    level = essentials.scan_selected(True)
 
-def scan_selected():
-    for sprite_object in levels.sprites():
-        if sprite_object.selected:
-            return sprite_object
+def init():
+    global running, active, cooldown2, cooldown, misc, last, status, play_btn, fake_bar, bar, closing, pulse
+    
+    status = "Menu"
+    last = "Settings"
+    misc = False
+    active = None
+    running = True
+    pulse = False
 
-misc = pygame.sprite.Group()
-buttons = pygame.sprite.Group()
-main = pygame.sprite.Group()
-settings = pygame.sprite.Group()
-levels = pygame.sprite.LayeredUpdates()
-selection = pygame.sprite.Group()
+    last = 0
+    cooldown = 100
+    cooldown2 = 100
+    ticks = 0
+    transition = 20
+    cur_offset = 0
+    offset = 0
+    set_offset = 0
 
-audio = pygame.sprite.Group()
-config = pygame.sprite.Group()
-language = pygame.sprite.Group()
-credit = pygame.sprite.Group()
+    BG = BGColor((0, 50, 100), (0, 80, 160), "sine", 500)
+    placeholder = load_image("placeholder.png")
+    placeholder2 = load_image("placeholder2.png")
+    intro_img = pygame.transform.scale(load_image("intro.png"), (1000, 600))
+    icon = load_image("icon.png")
+    arrow = load_image("arrow.png")
+    
+    audio_img = load_image("audio.png")
+    settings_img = load_image("settings.png")
+    lang_img = load_image("language.png")
+    credit_img = load_image("credits.png")
 
-buf = load_image("bg_grid.png")
-buf.fill((255, 255, 255, 255), None, pygame.BLEND_RGBA_MULT)
-size = buf.get_rect()[2:]
-bg = pygame.Surface((1100, 700), pygame.SRCALPHA)
+    # intro()
 
-for i in range(0, 12):
-    for j in range(0, 9):
-        bg.blit(buf, (size[0] * i, size[1] * j))
+    side_bar = load_image("side_bar.png")
+    side_bar2 = load_image("side_bar2.png")
+    Lexend = 'fonts/Lexend-Medium.ttf'
+
+    credits_icon = pygame.transform.scale(load_image("icon-credits.png"), (100, 100))
+    settings_icon = pygame.transform.scale(load_image("icon-settings.png"), (100, 100))
+    audio_icon = pygame.transform.scale(load_image("icon-audio.png"), (100, 100))
+
+    tutorial_img = "level-tutorial.png"
+    forest_img = "level-forest.png"
+    thunder_img = "level-thunder.png"
+    city_img = "level-city.png"
+    
+    essentials.SideBar(side_bar2)
+    info = essentials.InfoBar(placeholder)
+    essentials.TopBar(placeholder, (Lexend, 60))
+    
+    bar = essentials.SettingsBar(side_bar)
+    fake_bar = essentials.Object(side_bar, (-250, 0, 350, 600), (0, 0), essentials.misc)
+    settings_btn = essentials.Button(settings_icon, SwitchModes, rect=[25, 25, 100, 100], orig=[-125, 25], groups=essentials.main)
+    play_btn = essentials.Button(placeholder2, play, rect=[800, 540, 200, 60], orig=[800, 800], groups=essentials.buttons)
+    closing = essentials.Button(icon, SwitchModes, rect=[-60, 5, 50, 50], orig=[5, 5], groups=essentials.settings)
+    
+    audio_image = essentials.Image(audio_img, (1000, 100), (450, 100), essentials.settings)
+    settings_image = essentials.Image(settings_img, (1000, 700), (450, 700), essentials.settings)
+    language_image = essentials.Image(lang_img, (1000, 1300), (450, 1300), essentials.settings)
+    credit_image = essentials.Image(credit_img, (1000, 1900), (450, 1900), essentials.settings)
+    image_list = [audio_image, settings_image, language_image, credit_image]
+    
+    audio = essentials.Settings_Select(audio_icon, "Audio", (Lexend, 64), (10, 80, 100, 100), call, essentials.settings, essentials.audio)
+    settings = essentials.Settings_Select(settings_icon, "Settings", (Lexend, 64), (10, 215, 100, 100), call, essentials.settings, essentials.config)
+    language = essentials.Settings_Select(icon, "Language", (Lexend, 64), (10, 345, 100, 100), call, essentials.settings, essentials.language)
+    credit = essentials.Settings_Select(credits_icon, "Credits", (Lexend, 64), (10, 480, 100, 100), call, essentials.settings, essentials.credit)
+
+    audio.assign(0)
+    settings.assign(1)
+    language.assign(2)
+    credit.assign(3)
+
+    forest = essentials.Level(forest_img, 1, info.select)
+    highway = essentials.Level(thunder_img, 2, info.select)
+    city = essentials.Level(city_img, 3, info.select)
+    tutorial = essentials.Level(tutorial_img, 0, info.select)
+
+
+    info.connect(play_btn)
+    play_btn.replace()
+
+    quality = essentials.Text_Selection((250, -500), (250, 100), ['Low', 'Medium', 'High'], "Quality", (Lexend, 64), arrow, essentials.config)
+    refresh = essentials.Text_Selection((250, -400), (250, 200), ['60', '100', '120'], "Refresh Rate", (Lexend, 48), arrow, essentials.config)
+    
+    moffset = essentials.Text_Selection((250, -300), (250, 300), list(map(lambda x: str(x) + 'ms', list(range(-30, 31)))) , "Music Offset", (Lexend, 48), arrow, essentials.audio)
+    moffset.bar.limit = 1
+    moffset.bar.selected = 29
+    moffset.inc()
+
+    chaoz = essentials.Text_Link("ParagonX9 - Chaoz Fantasy", (Lexend, 48), 'https://www.newgrounds.com/audio/listen/85046', (250, -200), (250, 400), essentials.credit)
+    
+    return locals()
+
