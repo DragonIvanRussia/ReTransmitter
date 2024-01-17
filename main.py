@@ -10,9 +10,40 @@ def save():
     with open(file, 'w') as csvfile:
         writer = csv.writer(csvfile, delimiter=';', quotechar='"')
         writer.writerow(data)
-        
+    load()
+
+def keybind(screen, position):
+    global data
+    s = pygame.Surface((1000, 600))
+    s.set_alpha(128)
+    screen.blit(s, (0, 0))
+    font = pygame.font.Font(None, 48)
+    res = font.render("Enter your key", 1, (255, 255, 255))
+    screen.blit(res, ((1000 - res.get_width()) / 2, 200))
+    res = font.render(f"Current key:{pygame.key.name(data[4][position])}", 1, (255, 255, 255))
+    screen.blit(res, ((1000 - res.get_width()) / 2, 300))
+    count = 100
+    delta = 0
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                exec_status = 'quit'
+                menu.running = False
+                break
+            if event.type == pygame.KEYDOWN and delta != 1:
+                buf = event
+                delta = 1
+                res = font.render(f"New key selected:{pygame.key.name(buf.key)}", 1, (255, 255, 255))
+                screen.blit(res, ((1000 - res.get_width()) / 2, 400))
+        count -= delta
+        if count == 0:
+            break
+        clock.tick(60)
+        pygame.display.flip()
+    data[4][position] = buf.key
+   
 def load():
-    global locked, quality, refresh, moffset, data
+    global locked, quality, refresh, moffset, data, keybinds
     file = os.getenv('LOCALAPPDATA') + '\ReTransmitter\settings.csv'
     with open(file, 'r') as csvfile:
         reader = csv.reader(csvfile, delimiter=';', quotechar='"')
@@ -28,8 +59,15 @@ def load():
             locked[index] = True
         else:
             locked[index] = False
+    data[4] = data[4][1:-1].split(', ')
+    for i in range(0, 4):
+        data[4][i] = int(data[4][i])
+    keybinds = data[4]
+    data = [*data[:3], locked, keybinds]
+            
 
 if __name__ == '__main__':
+    pygame.mixer.pre_init(frequency=22050)
     pygame.init()
     pygame.display.set_caption('ReTransmitter')
     size = width, height = 1000, 600
@@ -39,22 +77,33 @@ if __name__ == '__main__':
     running = True
     clock = pygame.time.Clock()
 
-    level = -1
+    level = 2
     exec_status = "menu"
     alpha = 30
     
     globals().update(menu.init())
 
-    globals().update(play.init())
+    button_down.action = keybind
+    button_down.args = [screen, 2]
+    button_left.action = keybind
+    button_left.args = [screen, 0]
+    button_right.action = keybind
+    button_right.args = [screen, 1]
+    button_up.action = keybind
+    button_up.args = [screen, 3]
+
+    
+    fade = essentials.Image(load_image("end_screen.png"), pos=(0, 0), orig=(0, 0))
+    fade.image.fill((0, 0, 0))
+    fade.image.set_alpha(0)
+    
     while True:
         if exec_status == "menu":
             try:
                 os.mkdir(os.getenv('LOCALAPPDATA') + '\ReTransmitter')
-                data = ['Medium', '60', '0ms', [True, False, False, False]]
+                data = ['Medium', '60', '0ms', [True, False, False, False], [pygame.K_LEFT, pygame.K_RIGHT, pygame.K_DOWN, pygame.K_UP]]
                 save()
             except Exception:
-                pass
-            finally:
                 load()
 
             tutorial.locked = not locked[0]
@@ -64,8 +113,12 @@ if __name__ == '__main__':
             
             menu.running = True
             alpha = 30
-            
-            print('level', level)
+            menu.counter_play = False
+
+            for i in range(0, 3):
+                if locked[i] == False:
+                    break
+                unlocked = i
             
             while menu.running:
                 for event in pygame.event.get():
@@ -125,50 +178,83 @@ if __name__ == '__main__':
                 clock.tick(60)
 
                 screen.blit(original, (0, 0))
-                if alpha > 0:
+                if alpha > 0 and not menu.counter_play:
                     alpha -= 1
                     effects.set_alpha(alpha * 8.5)
                     screen.blit(effects, (0,0))
                 
+                if menu.counter_play:
+                    alpha += 1
+                    effects.set_alpha(alpha * 8.5)
+                    screen.blit(effects, (0,0))
+                    if alpha * 8.5 == 255:
+                        menu.running = False
+                
                 pygame.display.flip()
+                
             exec_status = menu.exec_status
             if exec_status == "play":
                 level = menu.level
         if exec_status == "quit":
             break
         if exec_status == "play":
-            starting_point = pygame.time.get_ticks()
-            play.starting_point = starting_point
+            play.level = level
+            globals().update(play.init(level))
             play.running = True
             play.end_screen = False
             noise.counter = 0
+            audio_output = play.generate(level)
+            bpm = play.bpm
+            starting_point = pygame.time.get_ticks()
+            play.keybinds = keybinds
+            temp = []
+            play.quit = 0
+            for i in level_events:
+                i = str(int(i[0]) + starting_point - 200), i[1]
+                temp.append(i)
+            level_events = temp.copy()
+            play.starting_point = starting_point
+            anim_count = 1
+            anot_count = 0
+            play.accuracy = 100
+            pygame.mixer.init(22050)
+            pygame.mixer.music.load(play.music_name)
+            pygame.mixer.music.play(1, start=0)
             while play.running:
+                car_view.update_frame()
                 if level_events:
-                    time_until_event = (int(level_events[0][0]) - pygame.time.get_ticks() + starting_point)
-                distance_to_wave = abs(player.rect.x - wave.rect.x)
+                    time_until_event = (int(level_events[0][0]) - pygame.time.get_ticks())
+                distance_to_wave = abs(player.rect.x - 15 - wave.rect.x)
+                play.distance = player.rect.x
                 cooldown -= 1
                 for event in pygame.event.get():
                     if event.type == pygame.QUIT:
-                        running = False
+                        exec_status = 'quit'
+                        play.running = False
+                        play.quit = 1
                     if event.type == pygame.KEYDOWN:
                         i = pygame.key.get_pressed()
-                        if i[pygame.K_UP] and noise.alpha == 255:
-                            up_hit = pygame.time.get_ticks() + starting_point
+                        player.update(i)
+                        if i[play.keybinds[3]] and noise.alpha == 90:
+                            button.image = closed
+                            up_hit = pygame.time.get_ticks()
                             noise_reduction = 1
                     all_sprite.update(event)
 
                 if noise_reduction:
                     noise.disappear()
-                    if noise.alpha == 0:
-                        noise_rduction = 0
+                    if noise.alpha == 70:
+                        button.image = opened
+                    if noise.alpha == 20:
+                        noise_reduction = 0
 
                 if cooldown < 0:
-                    if 25 < distance_to_wave < 50:
-                        acc = 0.5
-                    elif distance_to_wave >= 50:
+                    if distance_to_wave > 45:
                         acc = 0
-                    elif distance_to_wave < 26:
-                        acc = 1
+                    if 10 < distance_to_wave < 45:
+                        acc = 0.5
+                if distance_to_wave < 10:
+                    acc = 1
 
                 if level_events:
                     if time_until_event < 0:
@@ -177,47 +263,67 @@ if __name__ == '__main__':
                             noise.noise()
                         elif level_events[0][1] == "end":
                             end_screen = 1
+                            play.running = False
                         else:
-                            process_cd = 90
-                            template.image = load_image(level_events[0][1] + "_process.png")
-                            radio_signal.blink()
+                            process_cd = 1
+                        if len(level_events) > 1 and abs(int(level_events[0][0]) - int(level_events[1][0])) < 242000 / bpm:
+                            radio_signal.quick = 1
+                        else:
+                            radio_signal.quick = 0
+                        radio_signal.blink()
                         level_events.pop(0)
 
                 if level_events and level_events[0][1] != "thunder" and level_events[0][1] != "end":
-                    if 240000 / bpm - 15 < time_until_event < 240000 / bpm + 15:
-                        template.image = load_image(level_events[0][1] + ".png")
+                    tick = 30000 if radio_signal.quick else 60000
+                    if 4 * tick / bpm - 20 < time_until_event < 4 * tick / bpm + 20:
                         process_cd = 9999
+                        car_view.change_frame_list(f"{level_events[0][1]}_level")
                         radio_signal.blink()
-                    if 180000 / bpm - 15 < time_until_event < 180000 / bpm + 15:
+                    if 3 * tick / bpm - 20 < time_until_event < 3 * tick / bpm + 20:
                         radio_signal.blink()
-                    if 120000 / bpm - 15 < time_until_event < 120000 / bpm + 15:
+                    if 2 * tick / bpm - 20 < time_until_event < 2 * tick / bpm + 20:
                         radio_signal.blink()
-                    if 60000 / bpm - 15 < time_until_event < 60000 / bpm + 15:
+                    if tick / bpm - 20 < time_until_event < tick / bpm + 20:
                         radio_signal.blink()
 
                 radio_signal.blink_fade()
 
+                if anot_count % 6 == 0 and anim_count < len(audio_output) - 2:
+                    wave.image = audio_output[anim_count]
+                    anim_count += 1
+                    anot_count = 0
+                waves.update(event)
+                anot_count += 1
                 all_sprite.draw(screen)
+                screen.blit(status.image, status.rect[:2])
 
                 acc_ticks += acc
                 total_ticks += 1
                 if process_cd < 0:
                     process_cd = 0
-                    template.image = load_image("stable.png")
                 else:
                     process_cd -= 1
                 clock.tick(fps)
+                if alpha > 0:
+                    alpha -= 1
+                    effects.set_alpha(alpha * 8.5)
+                    screen.blit(effects, (0,0))
+                # screen.blit(dialogue.rendered_text[0], dialogue.rendered_text[1])
                 pygame.display.flip()
-
+                    
+                accuracy = acc_ticks / total_ticks * 100
+                play.accuracy = accuracy
+                
                 if end_screen:
-                    play.running = False
-
+                    quit = 0
+                    running = 0
+            
             accuracy = acc_ticks / total_ticks * 100
             end_overlay = essentials.Image(load_image("end_screen.png"), (0, 0), (0, 0), end_sprite)
             alpha_end = 0
             end_font = pygame.font.Font(None, 50)
 
-            rank_font = pygame.font.Font("fonts/MS PGothic.ttf", 300)
+            rank_font = pygame.font.Font(None, 300)
             rank = "C", "mediumpurple"
             if accuracy >= 98:
                 rank = "A+", "lightcoral"
@@ -247,15 +353,21 @@ if __name__ == '__main__':
             play.load_table(screen, player_pos_record, wave_pos_record)
             count_exp = 0
             running_exp = True
-            while running_exp:
+            while running_exp and not play.quit:
                 for event in pygame.event.get():
-                    if event.type == pygame.QUIT:
-                        running = False
+                    if event.type == pygame.QUIT or play.quit:
+                        exec_status = 'quit'
+                    if count_exp >= 180 and pygame.MOUSEBUTTONDOWN:
+                        exec_status = "menu"
+                        running_exp = False
                 count_exp += 1
-                if count_exp >= 360:
-                    running_exp = False
                 clock.tick(60)
                 pygame.display.flip()
-            globals().update(play.init())
-            exec_status = "menu"
+            if accuracy > 90:
+                unlocked += 1
+                if unlocked > 3:
+                    unlocked = 3
+                locked[unlocked] = True
+                save()
+            pygame.mixer.quit()
     pygame.quit()

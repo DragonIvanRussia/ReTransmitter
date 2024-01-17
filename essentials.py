@@ -42,18 +42,23 @@ class Object(pygame.sprite.Sprite):
 
 
 class Button(Object):
-    def __init__(self, img, command, text="generic", rect=[0, 0, 100, 100], orig=[0,0], groups=[]):
+    def __init__(self, img, command, text=None, rect=[0, 0, 100, 100], orig=[0,0], groups=[]):
         global buttons
         self.action = command
         self.shown = True
         self.clicked = False
+        self.args = text
         super().__init__(img, groups=groups, rect=rect, orig=orig)
 
     def update(self, *args, cont=True):
         if args and args[0].type == pygame.MOUSEBUTTONDOWN and args[0].button == pygame.BUTTON_LEFT:
             if self.shown and pygame.Rect(self.rect).collidepoint(args[0].pos) and not self.clicked:
                 self.clicked = True
-                self.action()
+                if self.args is not None:
+                    self.action(*self.args)
+                else:
+                    self.action()
+                    
         if args and args[0].type == pygame.MOUSEBUTTONUP and args[0].button == pygame.BUTTON_LEFT:
             self.clicked = False
         if cont:
@@ -447,6 +452,7 @@ class Text_Selection(Object):
         self.bar.frame = 0
 
     def set(self, var):
+        self.bar.last = 0
         self.bar.selected = self.list.index(var)
         self.bar.frame = 0
 

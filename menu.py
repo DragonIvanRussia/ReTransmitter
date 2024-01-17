@@ -58,6 +58,9 @@ def show():
             sprite_object.switch()
     pulse = True
 
+def blank(event):
+    print('ivan you forgot to link the action')
+
 def call(arg):
     global active, cooldown2
     active = arg
@@ -67,8 +70,8 @@ def call(arg):
         sprite_object.switch()
 
 def play():
-    global running, exec_status, level
-    running = False
+    global counter_play, exec_status, level
+    counter_play = True
     exec_status = "play"
     level = essentials.scan_selected(True)
 
@@ -149,19 +152,38 @@ def init():
     city = essentials.Level(city_img, 3, info.select)
     tutorial = essentials.Level(tutorial_img, 0, info.select)
 
-
     info.connect(play_btn)
     play_btn.replace()
 
-    quality = essentials.Text_Selection((250, -500), (250, 100), ['Low', 'Medium', 'High'], "Quality", (Lexend, 64), arrow, essentials.config)
-    refresh = essentials.Text_Selection((250, -400), (250, 200), ['60', '100', '120'], "Refresh Rate", (Lexend, 48), arrow, essentials.config)
+    quality = essentials.Text_Selection((250, -500), (250, -500), ['Low', 'Medium', 'High'], "Quality", (Lexend, 64), arrow, essentials.config)
+    refresh = essentials.Text_Selection((250, -550), (250, 50), ['60', '100', '120'], "Frame Limiter", (Lexend, 48), arrow, essentials.config)
+
+    down_btn_img = essentials.Selection_Bar((0, 0, 400, 75), ['Link Down Button'], 0, (Lexend, 48))
+    left_btn_img = essentials.Selection_Bar((0, 0, 400, 75), ['Link Left Button'], 0, (Lexend, 48))
+    right_btn_img = essentials.Selection_Bar((0, 0, 400, 75), ['Link Right Button'], 0, (Lexend, 48))
+    up_btn_img = essentials.Selection_Bar((0, 0, 400, 75), ['Link Up Button'], 0, (Lexend, 48))
+    
+    button_down = essentials.Button(down_btn_img.image, blank, text=[2], rect=(350, -400, 400, 75), orig=(350, 200), groups=essentials.config)
+    button_left = essentials.Button(left_btn_img.image, blank, text=[0], rect=(350, -300, 400, 75), orig=(350, 300), groups=essentials.config)
+    button_right = essentials.Button(right_btn_img.image, blank, text=[1], rect=(350, -200, 400, 75), orig=(350, 400), groups=essentials.config)
+    button_up = essentials.Button(up_btn_img.image, blank, text=[3], rect=(350, -100, 400, 75), orig=(350, 500), groups=essentials.config)
     
     moffset = essentials.Text_Selection((250, -300), (250, 300), list(map(lambda x: str(x) + 'ms', list(range(-30, 31)))) , "Music Offset", (Lexend, 48), arrow, essentials.audio)
     moffset.bar.limit = 1
     moffset.bar.selected = 29
     moffset.inc()
 
-    chaoz = essentials.Text_Link("ParagonX9 - Chaoz Fantasy", (Lexend, 48), 'https://www.newgrounds.com/audio/listen/85046', (250, -200), (250, 400), essentials.credit)
+    rhythm = essentials.Text_Link("Inspired by Rhythm Doctor(7th Beat Games)", (Lexend, 48), 'https://store.steampowered.com/app/774181/Rhythm_Doctor/', (150, -550), (150, 50), essentials.credit)
+    notice = essentials.Text_Link("you can click on these to check the linked websites", (Lexend, 24), 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', (150, -510), (150, 90), essentials.credit)
+    bgm = essentials.Text_Link("background music: allo made it in like 5 hours i think", (Lexend, 36), '', (150, -450), (150, 150), essentials.credit)
+    level1 = essentials.Text_Link("1st level: Rhythm Doctor 2-2 Supraventricular Tachycardia", (Lexend, 36), 'https://store.steampowered.com/app/774181/Rhythm_Doctor/', (150, -410), (150, 190), essentials.credit)
+    level2 = essentials.Text_Link("2nd level: P4koo - 8th Planet [Re-Search]", (Lexend, 36), 'https://www.youtube.com/watch?v=q0v1IfRgcQM', (150, -370), (150, 230), essentials.credit)
+    chaoz = essentials.Text_Link("3rd level: ParagonX9 - Chaoz Fantasy", (Lexend, 36), 'https://www.newgrounds.com/audio/listen/85046', (150, -330), (150, 270), essentials.credit)
+    dseg = essentials.Text_Link("7-segment font provided by keshikan", (Lexend, 36), 'https://github.com/keshikan/DSEG/blob/master/DSEG-LICENSE.txt', (150, -290), (150, 310), essentials.credit)
+    lexend = essentials.Text_Link("Lexend font provided by Google Fonts Team", (Lexend, 36), 'https://github.com/googlefonts/lexend/blob/main/OFL.txt', (150, -250), (150, 350), essentials.credit)
+    lexend = essentials.Text_Link("Nexa Rust font provided by Svetoslav Simov/Fontfabric", (Lexend, 36), 'https://www.1001fonts.com/nexa-rust-font.html', (150, -210), (150, 390), essentials.credit)
+    lexend = essentials.Text_Link("Dragon Ivan - Main Developer & Artist", (Lexend, 48), 'https://dragonivanrussia.itch.io/', (150, -150), (150, 450), essentials.credit)
+    lexend = essentials.Text_Link("AlloRus162 - Developer & Music Producer", (Lexend, 48), '', (150, -100), (150, 500), essentials.credit)
     
     return locals()
 
