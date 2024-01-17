@@ -1,4 +1,4 @@
-supraventricular_tachycardia.mp3;176
+sounds/supraventricular_tachycardia.mp3;176
 11009;left
 16463;right
 21918;dash_right
