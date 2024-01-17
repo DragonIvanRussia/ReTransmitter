@@ -363,7 +363,7 @@ if __name__ == '__main__':
                 count_exp += 1
                 clock.tick(60)
                 pygame.display.flip()
-            if accuracy > 90 and end_screen:
+            if accuracy > 90 and end_screen and level == unlocked:
                 unlocked += 1
                 if unlocked > 3:
                     unlocked = 3
