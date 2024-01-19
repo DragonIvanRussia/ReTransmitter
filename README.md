@@ -8,4 +8,3 @@ Lexend font provided by Google Fonts Team
 Nexa Rust font provided by Svetoslav Simov/Fontfabric
 Dragon Ivan - Main Developer & Artist
 AlloRus162 - Developer & Artist
-    
