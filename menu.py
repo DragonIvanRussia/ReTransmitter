@@ -115,6 +115,7 @@ def init():
     credits_icon = pygame.transform.scale(load_image("icon-credits.png"), (100, 100))
     settings_icon = pygame.transform.scale(load_image("icon-settings.png"), (100, 100))
     audio_icon = pygame.transform.scale(load_image("icon-audio.png"), (100, 100))
+    language_icon = pygame.transform.scale(load_image("icon-language.png"), (100, 100))
 
     tutorial_img = "level-tutorial.png"
     forest_img = "level-forest.png"
@@ -139,7 +140,7 @@ def init():
     
     audio = essentials.Settings_Select(audio_icon, "Audio", (Lexend, 64), (10, 80, 100, 100), call, essentials.settings, essentials.audio)
     settings = essentials.Settings_Select(settings_icon, "Settings", (Lexend, 64), (10, 215, 100, 100), call, essentials.settings, essentials.config)
-    language = essentials.Settings_Select(icon, "Language", (Lexend, 64), (10, 345, 100, 100), call, essentials.settings, essentials.language)
+    language = essentials.Settings_Select(language_icon, "Language", (Lexend, 64), (10, 345, 100, 100), call, essentials.settings, essentials.language)
     credit = essentials.Settings_Select(credits_icon, "Credits", (Lexend, 64), (10, 480, 100, 100), call, essentials.settings, essentials.credit)
 
     audio.assign(0)
@@ -175,7 +176,7 @@ def init():
 
     rhythm = essentials.Text_Link("Inspired by Rhythm Doctor(7th Beat Games)", (Lexend, 48), 'https://store.steampowered.com/app/774181/Rhythm_Doctor/', (150, -550), (150, 50), essentials.credit)
     notice = essentials.Text_Link("you can click on these to check the linked websites", (Lexend, 24), 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', (150, -510), (150, 90), essentials.credit)
-    bgm = essentials.Text_Link("background music: allo made it in like 5 hours i think", (Lexend, 36), '', (150, -450), (150, 150), essentials.credit)
+    bgm = essentials.Text_Link("background music: none :(", (Lexend, 36), '', (150, -450), (150, 150), essentials.credit)
     level1 = essentials.Text_Link("1st level: Rhythm Doctor 2-2 Supraventricular Tachycardia", (Lexend, 36), 'https://store.steampowered.com/app/774181/Rhythm_Doctor/', (150, -410), (150, 190), essentials.credit)
     level2 = essentials.Text_Link("2nd level: P4koo - 8th Planet [Re-Search]", (Lexend, 36), 'https://www.youtube.com/watch?v=q0v1IfRgcQM', (150, -370), (150, 230), essentials.credit)
     chaoz = essentials.Text_Link("3rd level: ParagonX9 - Chaoz Fantasy", (Lexend, 36), 'https://www.newgrounds.com/audio/listen/85046', (150, -330), (150, 270), essentials.credit)
@@ -183,7 +184,7 @@ def init():
     lexend = essentials.Text_Link("Lexend font provided by Google Fonts Team", (Lexend, 36), 'https://github.com/googlefonts/lexend/blob/main/OFL.txt', (150, -250), (150, 350), essentials.credit)
     lexend = essentials.Text_Link("Nexa Rust font provided by Svetoslav Simov/Fontfabric", (Lexend, 36), 'https://www.1001fonts.com/nexa-rust-font.html', (150, -210), (150, 390), essentials.credit)
     lexend = essentials.Text_Link("Dragon Ivan - Main Developer & Artist", (Lexend, 48), 'https://dragonivanrussia.itch.io/', (150, -150), (150, 450), essentials.credit)
-    lexend = essentials.Text_Link("AlloRus162 - Developer & Music Producer", (Lexend, 48), '', (150, -100), (150, 500), essentials.credit)
+    lexend = essentials.Text_Link("AlloRus162 - Developer & Artist", (Lexend, 48), '', (150, -100), (150, 500), essentials.credit)
     
     return locals()
 

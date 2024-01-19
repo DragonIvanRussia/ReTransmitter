@@ -67,7 +67,7 @@ def load():
             
 
 if __name__ == '__main__':
-    pygame.mixer.pre_init(frequency=22050)
+    pygame.mixer.pre_init()
     pygame.init()
     pygame.display.set_caption('ReTransmitter')
     size = width, height = 1000, 600
@@ -199,31 +199,34 @@ if __name__ == '__main__':
             break
         if exec_status == "play":
             play.level = level
+            pygame.mixer.init()
             globals().update(play.init(level))
             play.running = True
             play.end_screen = False
-            noise.counter = 0
+            noise.counter, anim_counter = 0, 0
             audio_output = play.generate(level)
             bpm = play.bpm
             starting_point = pygame.time.get_ticks()
             play.keybinds = keybinds
-            temp = []
             play.quit = 0
-            for i in level_events:
-                i = str(int(i[0]) + starting_point - 200), i[1]
-                temp.append(i)
-            level_events = temp.copy()
+            level_events, bpm_events = [], []
+            for i in level_data:
+                i = str(int(i[0]) + starting_point - 200), *i[1:]
+                if i[1] == 'change_bpm':
+                    bpm_events.append(i)
+                else:
+                    level_events.append(i)
             play.starting_point = starting_point
-            anim_count = 1
-            anot_count = 0
+            shown = False
             play.accuracy = 100
-            pygame.mixer.init(22050)
             pygame.mixer.music.load(play.music_name)
             pygame.mixer.music.play(1, start=0)
             while play.running:
+                if (pygame.time.get_ticks() - starting_point) % 1200 <= 50:
+                    screen.blit(load_image(f'level-{level}\\side_{((pygame.time.get_ticks() - starting_point) // 1200) % 2}.png'), (0, 0))
+                cooldown = play.cooldown
+                play.cooldown -= 1
                 car_view.update_frame()
-                if level_events:
-                    time_until_event = (int(level_events[0][0]) - pygame.time.get_ticks())
                 distance_to_wave = abs(player.rect.x - 15 - wave.rect.x)
                 play.distance = player.rect.x
                 cooldown -= 1
@@ -256,7 +259,14 @@ if __name__ == '__main__':
                 if distance_to_wave < 10:
                     acc = 1
 
+                if bpm_events:
+                    time_until_event = int(bpm_events[0][0]) - pygame.time.get_ticks()
+                    if time_until_event < 0:
+                        bpm = int(bpm_events[0][2])
+                        del bpm_events[0]
+                
                 if level_events:
+                    time_until_event = int(level_events[0][0]) - pygame.time.get_ticks()
                     if time_until_event < 0:
                         wave.event_move(level_events[0][1])
                         if level_events[0][1] == "thunder":
@@ -265,6 +275,7 @@ if __name__ == '__main__':
                             end_screen = 1
                             play.running = False
                         else:
+                            car_view.change_frame_list(f"level-{level}\\stable", 2)
                             process_cd = 1
                         if len(level_events) > 1 and abs(int(level_events[0][0]) - int(level_events[1][0])) < 242000 / bpm:
                             radio_signal.quick = 1
@@ -272,28 +283,30 @@ if __name__ == '__main__':
                             radio_signal.quick = 0
                         radio_signal.blink()
                         level_events.pop(0)
+                        shown = False
 
                 if level_events and level_events[0][1] != "thunder" and level_events[0][1] != "end":
                     tick = 30000 if radio_signal.quick else 60000
                     if 4 * tick / bpm - 20 < time_until_event < 4 * tick / bpm + 20:
+                        stable = 1
+                        event = 0
                         process_cd = 9999
-                        car_view.change_frame_list(f"{level_events[0][1]}_level")
                         radio_signal.blink()
-                    if 3 * tick / bpm - 20 < time_until_event < 3 * tick / bpm + 20:
+                        shown = play.action(car_view, level, level_events[0], shown)
+                    elif 3 * tick / bpm - 20 < time_until_event < 3 * tick / bpm + 20:
                         radio_signal.blink()
-                    if 2 * tick / bpm - 20 < time_until_event < 2 * tick / bpm + 20:
+                        shown = play.action(car_view, level, level_events[0], shown)
+                    elif 2 * tick / bpm - 20 < time_until_event < 2 * tick / bpm + 20:
                         radio_signal.blink()
-                    if tick / bpm - 20 < time_until_event < tick / bpm + 20:
+                        shown = play.action(car_view, level, level_events[0], shown)
+                    elif tick / bpm - 20 < time_until_event < tick / bpm + 20:
                         radio_signal.blink()
+                        shown = play.action(car_view, level, level_events[0], shown)
 
                 radio_signal.blink_fade()
 
-                if anot_count % 6 == 0 and anim_count < len(audio_output) - 2:
-                    wave.image = audio_output[anim_count]
-                    anim_count += 1
-                    anot_count = 0
+                wave.image = audio_output[(pygame.time.get_ticks() - starting_point) // 100]
                 waves.update(event)
-                anot_count += 1
                 all_sprite.draw(screen)
                 screen.blit(status.image, status.rect[:2])
 
@@ -304,16 +317,13 @@ if __name__ == '__main__':
                 else:
                     process_cd -= 1
                 clock.tick(fps)
-                if alpha > 0:
-                    alpha -= 1
-                    effects.set_alpha(alpha * 8.5)
-                    screen.blit(effects, (0,0))
                 # screen.blit(dialogue.rendered_text[0], dialogue.rendered_text[1])
                 pygame.display.flip()
                     
                 accuracy = acc_ticks / total_ticks * 100
                 play.accuracy = accuracy
-                
+                if total_ticks % 100 == 50:
+                    print(clock.get_fps())
                 if end_screen:
                     quit = 0
                     running = 0
@@ -357,7 +367,7 @@ if __name__ == '__main__':
                 for event in pygame.event.get():
                     if event.type == pygame.QUIT or play.quit:
                         exec_status = 'quit'
-                    if count_exp >= 180 and pygame.MOUSEBUTTONDOWN:
+                    if count_exp >= 360 and pygame.MOUSEBUTTONDOWN:
                         exec_status = "menu"
                         running_exp = False
                 count_exp += 1

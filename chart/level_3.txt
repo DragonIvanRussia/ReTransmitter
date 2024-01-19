@@ -67,4 +67,4 @@ sounds/chaoz_fantasy.mp3;162
 128460;left
 129569;dash_right
 131047;dash_left
-135000;end
+132000;end

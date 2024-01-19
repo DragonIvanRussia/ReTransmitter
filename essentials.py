@@ -198,10 +198,10 @@ class Level(Object):
         
         if self.frame == self.limit:
             self.shown = True
-            if self.rect.y > 250:
-                levels.change_layer(self, 1)
-            else:
-                levels.change_layer(self, 0)
+        if self.rect.y > 250:
+            levels.change_layer(self, 1)
+        else:
+            levels.change_layer(self, 0)
         if args != ():
             self.click(args)
 

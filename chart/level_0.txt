@@ -1,7 +1,7 @@
-sounds/bad apple.mp3;200
-4000;left
-8000;dash_right
-9000;thunder
-13000;right
-17000;dash_left
-21000;end
+sounds/bad apple.mp3;60
+8000;left
+16000;dash_right
+18000;thunder
+26000;right
+37000;dash_left
+42000;end

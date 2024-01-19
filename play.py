@@ -5,22 +5,6 @@ import pygame
 import random
 from foundation import *
 
-
-def load_image(name, colorkey=None):
-    fullname = os.path.join('images', name)
-    # если файл не существует, то выходим
-    if not os.path.isfile(fullname):
-        print(f"Файл с изображением '{fullname}' не найден")
-        sys.exit()
-    image = pygame.image.load(fullname)
-    if colorkey is not None:
-        image = image.convert()
-        if colorkey == -1:
-            colorkey = image.get_at((0, 0))
-        image.set_colorkey(colorkey)
-    return image
-
-
 def load_level(name):
     global music_name, bpm
     with open(name, encoding="utf8") as f:
@@ -58,11 +42,12 @@ class Animation(pygame.sprite.Sprite):
         self.image = self.image_list[frame % self.frame_count]
         self.rect = self.image.get_rect()
 
-    def change_frame_list(self, name):
+    def change_frame_list(self, name, frame_count):
         global level
         self.image_list = []
+        self.frame_count = frame_count
         for i in range(self.frame_count):
-            self.image_list.append(pygame.transform.scale(load_image(f"level-{level}/{name}_{i}.png"), self.size))
+            self.image_list.append(pygame.transform.scale(load_image(f"{name}_{i}.png"), self.size))
         self.time = pygame.time.get_ticks()
         self.image = self.image_list[0]
         self.rect = self.image.get_rect()
@@ -195,6 +180,7 @@ class Wave(pygame.sprite.Sprite):
         self.counter = 0
 
     def event_move(self, event_move):
+        global cooldown
         if event_move == "dash_left":
             self.rect.x -= 75
         elif event_move == "left":
@@ -203,6 +189,7 @@ class Wave(pygame.sprite.Sprite):
             self.rect.x += 25
         elif event_move == "dash_right":
             self.rect.x += 75
+        cooldown = 6
         self.wave_pos_record.append((pygame.time.get_ticks() - starting_point, self.rect.x))
 
 
@@ -230,11 +217,15 @@ class RadioSignal(pygame.sprite.Sprite):
         self.quick = 0
         self.bpm = bpm
         self.rect = self.image.get_rect().move(self.pos[0] - self.size[0] / 2, self.pos[1] - self.size[1] / 2)
-
+        self.counter = True
+    
     def blink(self):
         self.time = pygame.time.get_ticks()
         self.alpha = 255
         self.image.set_alpha(self.alpha)
+        if self.counter:
+            turn_sound.play()
+            self.counter = False
 
     def blink_fade(self):
         bpm = self.bpm
@@ -243,6 +234,8 @@ class RadioSignal(pygame.sprite.Sprite):
             self.alpha = 255 - ((pygame.time.get_ticks() - self.time) / (tick / bpm)) * 255
             if self.alpha < 0:
                 self.alpha = 0
+            if self.alpha < 200:
+                self.counter = True
         self.image.set_alpha(self.alpha)
 
 
@@ -264,7 +257,7 @@ class Dialogue(pygame.sprite.Sprite):
         self.rendered_text = text_render, text_rect
 
 def init(level):
-    global running, up_hit, bpm_x, quit
+    global running, up_hit, bpm_x, quit, turn_sound, cooldown
     end_screen = 0
     all_sprite = pygame.sprite.Group()
     end_sprite = pygame.sprite.Group()
@@ -280,16 +273,17 @@ def init(level):
     acc_ticks = 0
     total_ticks = 0
     quit = 0
-    
-    level_events = load_level(f"chart/level_{level}.txt")
-    time_until_event = int(level_events[0][0])
+
+    turn_sound = pygame.mixer.Sound("sounds/turn.mp3")    
+    level_data = load_level(f"chart/level_{level}.txt")
+    time_until_event = int(level_data[0][0])
     bpm = 162
     bpm_x = bpm
 
     player_pos_record = []
     wave_pos_record = []
     
-    car_view = Animation((500,  300), f"stable_level", 2, 60000 / bpm, all_sprite)
+    car_view = Animation((450,  270), f"stable", 2, 60000 / bpm, all_sprite)
     radio = Image("radio.png", (0, 0), all_sprite)
     wave = Wave(wave_pos_record)
     radio_signal = RadioSignal(bpm, all_sprite)
@@ -310,6 +304,14 @@ def init(level):
     waves = Field(wave, noise, status, player=player, group=all_sprite)
     
     return locals()
+
+def action(car_view, level, level_events, shown):
+    if not shown:
+        if level == 3 and level_events[1].startswith("dash"):
+            car_view.change_frame_list(f"level-{level}\\{level_events[1]}", 4)
+        else:
+            car_view.change_frame_list(f"level-{level}\\{level_events[1]}", 2)
+    return True
 
 def generate(level):
     file = open(f"chart/level_{level}_wave.txt", 'r')
