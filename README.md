@@ -16,3 +16,7 @@ Nexa Rust font provided by Svetoslav Simov/Fontfabric
 Dragon Ivan - Main Developer & Artist
 
 AlloRus162 - Developer & Artist
+
+
+
+I'm not sure if I can continue working on this project, since the assignment is done and school is becoming harder.
